@@ -234,7 +234,7 @@ bpy.ops.wm.save_mainfile()
 
 헤드리스 1커맨드(검증 스크린샷 자동 생성):
 ```bash
-blender -b game-assets/blender/female.blend -P .claude/skills/blend-weapon-attach/scripts/attach_weapon.py -- \
+blender -b game-assets/characterser/female.blend -P .claude/skills/blend-weapon-attach/scripts/attach_weapon.py -- \
   --weapon tripo_node_c832a3a7 --bone mixamorig:RightHand --ref-height 0.8759 --shot-dir /tmp
 # -> ####ATTACH_OK ... grip_to_hand=0.0000 tip_to_hand=0.5557 / ####SHOT /tmp/attach_check_hand.png
 ```
