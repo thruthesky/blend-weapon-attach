@@ -237,6 +237,11 @@ def main():
 
     if abs(total - 1.0) > 1e-6:
         w.scale = [s * total for s in w.scale]
+        # matrix_world 는 depsgraph 평가 결과라 scale 대입만으론 갱신되지 않는다. 여기서 갱신하지
+        # 않으면 아래 --rot 의 `w.matrix_world = w.matrix_world @ E` 가 *구* matrix(스케일 반영 전)
+        # 를 읽어 되쓰면서 방금 준 scale 을 조용히 덮어쓴다(= --rot 과 --scale 을 같이 주면 --scale
+        # 이 무시됨). 실측 회귀 2026-07-28 titan.
+        bpy.context.view_layer.update()
     rx, ry, rz = [math.radians(float(t)) for t in a.rot.split(",")]
     if any((rx, ry, rz)):
         w.matrix_world = w.matrix_world @ Euler((rx, ry, rz), "XYZ").to_matrix().to_4x4()
