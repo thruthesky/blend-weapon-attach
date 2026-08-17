@@ -11,14 +11,18 @@ description: >-
   다음 경우 사용: (1) "이 무기를/칼을/검을 캐릭터 손에 장착/착용/들려줘", (2) ".blend 의 무기가
   손에 안 붙는다·손잡이가 팔뚝에 박힌다·무기가 손에서 떴다·검이 옆으로 누웠다", (3) "무기를
   오른손/왼손 본에 스키닝", (4) 아마추어를 교체해서 무기를 다시 붙여야 할 때, (5) 여러 캐릭터에
-  같은 파지 자세로 무기를 일괄 장착. 트리거 키워드 — 무기 장착, 칼 장착, 검 장착, weapon attach,
-  재부착, reattach, 손에 들려, grip, 손잡이, RightHand, .blend 무기, 무기 스키닝, 파지.
+  같은 파지 자세로 무기를 일괄 장착, (6) 손이 아니라 **등에 메기**("무기를 등에 붙여줘",
+  "칼을 등에 메게 해줘", 자루가 어깨 위로 솟고 칼끝이 아래로 — idle/walk 모델용) — 이때는
+  `attach_weapon_back.py` 를 쓰고 척추 본(mixamorig:Spine2)에 스키닝하며, 몸 표면을 실측해
+  파고들지 않게 자동 이격한다. 트리거 키워드 — 무기 장착, 칼 장착, 검 장착, weapon attach,
+  재부착, reattach, 손에 들려, grip, 손잡이, RightHand, .blend 무기, 무기 스키닝, 파지,
+  등에 메기, 등에 무기, back mount, sheathed, 어깨 위 자루, Spine2.
 metadata:
   author: laryen
-  version: "2.0"
+  version: "2.1"
 ---
 
-# .blend 무기 손 장착
+# .blend 무기 손·등 장착
 
 `.blend` 안의 무기 메시를 캐릭터 손 본에 **파지 프레임 이식 + 스키닝** 으로 붙인다.
 
@@ -108,6 +112,39 @@ done
    (`_sheet_config*.json` 의 `"character"`). `.blend` 는 멀쩡한데 시트만 깨지면
    *시트가 `.fbx` 를 가리키는지부터* 확인한다.
 
+## 등에 메기 (칼끝 아래·자루가 어깨 위로)
+
+손이 아니라 **등** 에 메는 것은 별도 스크립트다. 행동별 모델(idle/walk 은 등에 멘
+모델, attack 은 손에 쥔 모델)로 한 시트를 굽는 규약에 쓴다.
+
+```bash
+blender -b <character.blend> -P .claude/skills/blend-weapon-attach/scripts/attach_weapon_back.py -- \
+  --side right
+```
+
+**참조 캐릭터가 필요 없다.** 파지 프레임 대신 어깨·목·척추 본과 **몸 표면 실측** 에서
+자세를 매번 계산하므로 체형이 달라도 그대로 맞는다. 본은 `mixamorig:Spine2`.
+
+| 옵션 | 기본 | 뜻 |
+|---|---|---|
+| `--side right\|left` | left | 자루가 솟는 어깨. **오른손잡이 = `right`** |
+| `--tilt` | 14.5 | 수직에서 기운 각도 |
+| `--pommel-up` | 0.20 | 자루끝 높이(Spine2 head 기준·캐릭터 키 비율) |
+| `--pommel-side` | 1.0 | 자루끝 좌우(어깨 관절=1.0) |
+| `--sink` | 0.024 | 가장 두꺼운 부위가 몸에 묻혀도 되는 깊이(키 비율) |
+| `--flip-face` | off | 칼날 앞/뒷면 뒤집기 |
+
+성공 판정: `####BACK_OK`(`plane_dot_back`≈1 · `blade_dot_down`>0.8 · `deepest_sink`≈`--sink`) ·
+`####BACK_SIZE` · `####FOLLOW_OK` · **스샷 4컷을 Read 로 직접 확인**(뒤·3/4·옆·클로즈업).
+
+🛑 **`--sink` 를 0 으로 두지 마라 — 칼날이 등에서 뜬다.** 무기 전체를 안 닿게 밀면
+*가장 두꺼운 부위*(장식 가드·해골)가 밀어내는 만큼 얇은 칼날이 통째로 딸려 나온다
+(실측 male_vector: 해골 7.2cm vs 칼날 1.4~4cm → 칼날 3cm 부양, 옆에서 보면 떠 있는 티가 난다).
+등에 멘 무기는 두꺼운 부위가 갑옷에 조금 묻히는 것이 정상이다.
+
+🛑 **좌우를 뒤에서 본 그림으로 판단할 땐 주의** — *뒤에서* 보면 화면 오른쪽이 캐릭터의
+**오른쪽** 이다(앞에서 볼 때만 좌우가 뒤집힌다). 참조 그림이 뒷모습이면 그대로 읽으면 된다.
+
 ## 다른 파지 자세가 필요할 때 (왼손 등)
 
 내장 프레임은 **오른손 전용** 이다. 왼손·방패·역수(reverse grip) 등은
@@ -147,8 +184,9 @@ blender -b other.blend -P .claude/skills/blend-weapon-attach/scripts/attach_weap
 
 | 파일 | 역할 |
 |---|---|
-| `scripts/attach_weapon.py` | 부착 + 자동 검증(수치·follow-test·렌더). 진입점 |
+| `scripts/attach_weapon.py` | **손** 부착 + 자동 검증(수치·follow-test·렌더). 진입점 |
+| `scripts/attach_weapon_back.py` | **등** 부착(해부 축 계산 + 몸 표면 실측 이격) + 자동 검증 |
 | `scripts/extract_frame.py` | 잘 맞춰진 캐릭터에서 파지 프레임 추출 |
-| `scripts/weapon_geom.py` | 공용 분석(PCA 장축·가드 기준 손잡이·shape space). 위 둘이 같이 쓴다 |
+| `scripts/weapon_geom.py` | 공용 분석(PCA 장축·가드 기준 손잡이·shape space). 위 셋이 같이 쓴다 |
 
 전체 개념·로직·함정은 [references/attach-weapon.md](references/attach-weapon.md).

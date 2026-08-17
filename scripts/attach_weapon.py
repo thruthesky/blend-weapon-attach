@@ -196,8 +196,12 @@ def follow_test(arm, w, bone):
     🛑 판정은 *손 본 로컬 프레임에서의 드리프트* 로 한다. 월드 상대 오프셋은
     손이 회전하면 당연히 변하므로, 그걸로 판정하면 멀쩡한 부착을 실패로 읽는다.
     """
-    if arm.animation_data:
-        arm.animation_data.action = None
+    # 🛑 액션을 떼면 **반드시 되돌린다** — 안 되돌린 채 저장하면 그 캐릭터의
+    # 애니메이션 연결이 통째로 사라진다(idle/attack 모델은 포즈가 곧 자산이다).
+    ad = arm.animation_data
+    keep = (ad.action, getattr(ad, "action_slot", None)) if ad else None
+    if ad:
+        ad.action = None
 
     def sample():
         bpy.context.view_layer.update()
@@ -222,6 +226,10 @@ def follow_test(arm, w, bone):
     h1, c1, b1 = sample()
     for n in posed:  # 포즈 원복 — 저장 파일에 테스트 포즈가 남지 않게
         arm.pose.bones[n].rotation_quaternion = Quaternion((1, 0, 0, 0))
+    if keep:         # 액션·슬롯 원복
+        ad.action = keep[0]
+        if keep[1] is not None and hasattr(ad, "action_slot"):
+            ad.action_slot = keep[1]
     bpy.context.view_layer.update()
 
     dh, dwv, drift = (h1 - h0).length, (c1 - c0).length, (b1 - b0).length
@@ -300,15 +308,18 @@ def main():
 
     if not a.no_follow_test:
         follow_test(arm, w, a.bone)
-    if not a.no_shot:
-        render_check(arm, a.bone, a.shot_dir or (os.path.dirname(bpy.data.filepath) or os.getcwd()))
 
+    # 🛑 **저장이 먼저, 검증 렌더가 나중.** setup_render_scene 은 카메라·조명·월드·
+    # view_transform 을 갈아엎으므로, 렌더 뒤에 저장하면 그 씬 설정이 자산 파일에
+    # 그대로 굳는다(실측: ChkCam + SUN 3개 + AgX→Standard + 월드색까지 저장됨).
     if a.dry:
         print("####DRY 저장하지 않음")
     else:
         path = a.out or bpy.data.filepath
         bpy.ops.wm.save_as_mainfile(filepath=path)
         print(f"####SAVED {path}")
+    if not a.no_shot:
+        render_check(arm, a.bone, a.shot_dir or (os.path.dirname(bpy.data.filepath) or os.getcwd()))
 
 
 if __name__ == "__main__":
