@@ -14,9 +14,14 @@ description: >-
   같은 파지 자세로 무기를 일괄 장착, (6) 손이 아니라 **등에 메기**("무기를 등에 붙여줘",
   "칼을 등에 메게 해줘", 자루가 어깨 위로 솟고 칼끝이 아래로 — idle/walk 모델용) — 이때는
   `attach_weapon_back.py` 를 쓰고 척추 본(mixamorig:Spine2)에 스키닝하며, 몸 표면을 실측해
-  파고들지 않게 자동 이격한다. 트리거 키워드 — 무기 장착, 칼 장착, 검 장착, weapon attach,
+  파고들지 않게 자동 이격한다, (7) 손도 등도 아닌 **다리(허벅지)에 차기**("무기를 다리에
+  붙여줘", "칼을 왼쪽 허벅지에 차게 해줘", 자루가 골반 옆·칼끝이 무릎 아래로) — 이때는
+  `attach_weapon_leg.py` 를 쓰고 허벅지 본(mixamorig:LeftUpLeg/RightUpLeg)에 스키닝하며,
+  다리 표면을 실측해 *칼날 면* 이 다리에 닿도록 앉힌다(가드 두께 때문에 칼날이 뜨는 것을 막는다).
+  트리거 키워드 — 무기 장착, 칼 장착, 검 장착, weapon attach,
   재부착, reattach, 손에 들려, grip, 손잡이, RightHand, .blend 무기, 무기 스키닝, 파지,
-  등에 메기, 등에 무기, back mount, sheathed, 어깨 위 자루, Spine2.
+  등에 메기, 등에 무기, back mount, sheathed, 어깨 위 자루, Spine2,
+  다리에 차기, 허벅지 무기, 왼쪽 다리, 오른쪽 다리, leg mount, thigh, LeftUpLeg.
 metadata:
   author: laryen
   version: "2.1"
@@ -145,6 +150,38 @@ blender -b <character.blend> -P .claude/skills/blend-weapon-attach/scripts/attac
 🛑 **좌우를 뒤에서 본 그림으로 판단할 땐 주의** — *뒤에서* 보면 화면 오른쪽이 캐릭터의
 **오른쪽** 이다(앞에서 볼 때만 좌우가 뒤집힌다). 참조 그림이 뒷모습이면 그대로 읽으면 된다.
 
+## 다리(허벅지)에 차기 — 자루가 골반 옆·칼끝이 무릎 아래로
+
+손도 등도 아닌 **허벅지 바깥면** 에 납작하게 차는 것은 또 다른 스크립트다.
+
+```bash
+blender -b <character.blend> -P .claude/skills/blend-weapon-attach/scripts/attach_weapon_leg.py -- \
+  --side left
+```
+
+**참조 캐릭터가 필요 없다.** 등 장착과 같이 고관절·무릎 본과 **다리 표면 실측** 으로
+매번 계산하며, 본은 `mixamorig:<Side>UpLeg`(허벅지)다. 무릎을 굽혀도 허벅지를 따라간다.
+
+| 옵션 | 기본 | 뜻 |
+|---|---|---|
+| `--side left\|right` | left | 무기를 차는 다리(캐릭터 기준) |
+| `--tilt` | 6 | 허벅지 축에서 기운 각도(+ = 칼끝이 뒤로) |
+| `--pommel-up` | 0.06 | 자루끝 높이(고관절 기준·캐릭터 키 비율) |
+| `--forward` | 0.02 | 앞뒤 위치(고관절 기준·캐릭터 키 비율) |
+| `--blade-gap` | 0.010 | **칼날 면** 이 다리에서 떨어지는 거리(키 비율) |
+| `--max-sink` | 0.050 | 어느 부위도 이보다 깊게 묻히지 않는 상한 |
+| `--sink` | 없음 | 옛 규칙(가장 깊은 점 기준) 강제. 권장하지 않음 |
+
+성공 판정: `####LEG_OK`(`median_gap` ≈ `--blade-gap` · `plane_dot_out`≈1 ·
+`blade_dot_down`>0.8) · `####LEG_SIZE` · `####FOLLOW_OK` · **스샷 4컷을 Read 로 직접 확인**.
+
+🛑 **다리 장착은 *가장 깊은 점* 이 아니라 *칼날* 을 기준으로 앉힌다** — 등 장착의
+`--sink` 규칙을 그대로 가져오면 안 된다. 장식 가드가 칼날보다 몇 배 두꺼워서, 가드가
+안 묻도록 밀어내면 **칼날이 통째로 허공에 뜬다**(실측 male_chrome: 가드 3~4cm vs 칼날
+~1cm → 칼날이 3.8cm 부양, 앞에서 보면 안 붙은 것처럼 보인다). 기본 규칙은
+"칼날 면이 `--blade-gap` 만큼 떨어지게" 이고 가드는 필요한 만큼 묻힌다(`--max-sink` 상한).
+어디가 묻고 어디가 뜨는지는 `####LEG_BAND`(hilt/mid/point)가 따로 보여준다.
+
 ## 다른 파지 자세가 필요할 때 (왼손 등)
 
 내장 프레임은 **오른손 전용** 이다. 왼손·방패·역수(reverse grip) 등은
@@ -186,6 +223,7 @@ blender -b other.blend -P .claude/skills/blend-weapon-attach/scripts/attach_weap
 |---|---|
 | `scripts/attach_weapon.py` | **손** 부착 + 자동 검증(수치·follow-test·렌더). 진입점 |
 | `scripts/attach_weapon_back.py` | **등** 부착(해부 축 계산 + 몸 표면 실측 이격) + 자동 검증 |
+| `scripts/attach_weapon_leg.py` | **다리(허벅지)** 부착(다리 표면 실측 + 칼날 기준 안착) + 자동 검증 |
 | `scripts/extract_frame.py` | 잘 맞춰진 캐릭터에서 파지 프레임 추출 |
 | `scripts/weapon_geom.py` | 공용 분석(PCA 장축·가드 기준 손잡이·shape space). 위 셋이 같이 쓴다 |
 
